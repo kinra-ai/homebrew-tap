@@ -1,0 +1,62 @@
+name: Update Homebrew Formula
+
+on:
+  repository_dispatch:
+    types: [pypi-release]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to update to'
+        required: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update formula
+        run: |
+          VERSION="${{ github.event.client_payload.version || inputs.version }}"
+          # Strip leading 'v' if present
+          VERSION="${VERSION#v}"
+          URL="https://files.pythonhosted.org/packages/source/k/kin-code/kin_code-${VERSION}.tar.gz"
+
+          # Wait for PyPI to propagate the package
+          echo "Waiting for PyPI to propagate..."
+          for i in {1..30}; do
+            if curl -sLf "$URL" -o /dev/null 2>/dev/null; then
+              echo "Package available on PyPI"
+              break
+            fi
+            echo "Attempt $i: Package not yet available, waiting 10s..."
+            sleep 10
+          done
+
+          # Calculate SHA256
+          SHA256=$(curl -sL "$URL" | sha256sum | cut -d' ' -f1)
+
+          if [ -z "$SHA256" ] || [ "$SHA256" = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" ]; then
+            echo "Failed to download package or empty file"
+            exit 1
+          fi
+
+          # Update formula
+          sed -i "s|url \".*\"|url \"$URL\"|" Formula/kin-code.rb
+          sed -i "s|sha256 \".*\"|sha256 \"$SHA256\"|" Formula/kin-code.rb
+
+          echo "Updated formula to version $VERSION with SHA256: $SHA256"
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          title: "Update kin-code to ${{ github.event.client_payload.version || inputs.version }}"
+          body: |
+            Automated update triggered by new PyPI release.
+
+            Version: `${{ github.event.client_payload.version || inputs.version }}`
+          branch: update-formula-${{ github.event.client_payload.version || inputs.version }}
+          commit-message: "Update kin-code to ${{ github.event.client_payload.version || inputs.version }}"
