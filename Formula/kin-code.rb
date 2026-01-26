@@ -3,8 +3,8 @@ class KinCode < Formula
 
   desc "AI-powered coding assistant CLI"
   homepage "https://github.com/kinra-ai/kin-code"
-  url "https://files.pythonhosted.org/packages/source/k/kin-code/kin_code-VERSION.tar.gz"
-  sha256 "SHA256_HASH"
+  url "https://files.pythonhosted.org/packages/source/k/kin-code/kin_code-1.0.4.tar.gz"
+  sha256 "cf90bfe8b0dd3dfe28a5285cfd0dafd6496e7bcf0c6d6bb703cf728ff9f7e6ba"
   license "Apache-2.0"
 
   depends_on "python@3.12"
